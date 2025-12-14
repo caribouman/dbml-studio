@@ -1,0 +1,44 @@
+.group-node-wrapper {
+  pointer-events: none !important;
+}
+
+.group-node {
+  width: 100%;
+  height: 100%;
+  border: 3px solid;
+  border-radius: 12px;
+  padding: 50px 20px 20px 20px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  pointer-events: none !important;
+}
+
+.group-header {
+  position: absolute;
+  top: 12px;
+  left: 15px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  pointer-events: all !important;
+  user-select: none;
+  cursor: grab !important;
+  z-index: 1000;
+}
+
+.group-header:active {
+  cursor: grabbing !important;
+}
+
+/* Ensure the resize handles are above everything */
+.react-flow__resize-control {
+  pointer-events: all !important;
+  z-index: 1001 !important;
+}

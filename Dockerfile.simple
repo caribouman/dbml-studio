@@ -1,0 +1,18 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install build dependencies for better-sqlite3
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
+# Copy package files only
+COPY app/package*.json ./
+
+# Install dependencies (this layer is cached unless package.json changes)
+RUN npm install
+
+# Don't copy or build anything else - will be mounted via volume
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

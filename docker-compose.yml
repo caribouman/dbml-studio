@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  dbml-studio:
+    build: .
+    container_name: dbml-studio
+    restart: unless-stopped
+    command: npm start
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dbml-studio.rule=Host(`dbml-studio.soyecourt.ovh`)"
+      - "traefik.http.routers.dbml-studio.entrypoints=websecure"
+      - "traefik.http.routers.dbml-studio.tls=true"
+      - "traefik.http.routers.dbml-studio.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dbml-studio.service=dbml-studio"
+      - "traefik.http.services.dbml-studio.loadbalancer.server.port=3000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./app:/app
+      - /app/node_modules
+      - ./app/data:/app/data
+    networks:
+      - frontend
+
+networks:
+  frontend:
+    external: true

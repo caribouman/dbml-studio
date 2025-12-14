@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose up:*)",
+      "Bash(docker logs:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker exec:*)",
+      "Bash(test:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(node -e:*)",
+      "Bash(chmod:*)",
+      "Bash(./rebuild.sh)",
+      "Bash(docker stop:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Bash(docker inspect:*)",
+      "Bash(sudo chown:*)",
+      "Bash(npm run electron:build:linux:*)",
+      "Bash(sudo apt-get update:*)",
+      "Bash(sudo apt-get install:*)",
+      "Bash(npx electron-builder:*)",
+      "Bash(ls:*)",
+      "Bash(zip:*)",
+      "Bash(npm run electron:build:win:*)",
+      "Bash(tee:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

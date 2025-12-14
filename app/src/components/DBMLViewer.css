@@ -1,0 +1,173 @@
+.dbml-viewer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background-color: #fff;
+}
+
+.dbml-viewer.dark {
+  background-color: #1a192b;
+}
+
+.react-flow__node {
+  cursor: grab !important;
+  pointer-events: all !important;
+}
+
+.react-flow__node.dragging {
+  cursor: grabbing !important;
+}
+
+.react-flow__node.selectable:hover {
+  cursor: grab !important;
+}
+
+/* Ensure child nodes (tables in groups) are draggable */
+.react-flow__node[data-type="table"] {
+  pointer-events: all !important;
+  cursor: grab !important;
+}
+
+/* Group node wrapper should not block pointer events except for the header */
+.react-flow__node-group {
+  pointer-events: none !important;
+}
+
+/* Ensure table nodes are always interactive and on top */
+.react-flow__node-table {
+  pointer-events: all !important;
+}
+
+.empty-state,
+.error-state {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.empty-content,
+.error-content {
+  text-align: center;
+  color: white;
+  padding: 40px;
+  max-width: 500px;
+}
+
+.empty-content h2,
+.error-content h2 {
+  font-size: 36px;
+  margin: 0 0 20px 0;
+  font-weight: 600;
+}
+
+.empty-content p,
+.error-content p {
+  font-size: 18px;
+  margin: 15px 0;
+  line-height: 1.6;
+  opacity: 0.95;
+}
+
+.empty-content .hint {
+  font-size: 16px;
+  opacity: 0.8;
+  font-style: italic;
+  margin-top: 20px;
+}
+
+.error-state {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+}
+
+.error-content h2 {
+  font-size: 32px;
+}
+
+.color-picker-bar {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 6000;
+  background: white;
+  border-radius: 8px;
+  padding: 12px 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 2px solid #667eea;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.color-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.color-picker-label {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.color-picker-colors {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.color-input {
+  width: 50px;
+  height: 32px;
+  border: 2px solid #e5e7eb;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.preset-colors {
+  display: flex;
+  gap: 8px;
+}
+
+.preset-color {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #e5e7eb;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-color:hover {
+  transform: scale(1.1);
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.export-buttons {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  gap: 10px;
+}
+
+.export-btn {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.export-btn:hover {
+  background: #5568d3;
+}

@@ -1,0 +1,17 @@
+// Correct DBML Project syntax
+Project financial_inventory {
+  database_type: 'PostgreSQL'
+  Note: '''
+    This project is about financial control and inventory management.
+    It tracks customers, orders, and products.
+  '''
+}
+
+Table MBBREP [note: 'Factured Customer', headerColor: #feca57]{
+  CUSNO varchar [pk, note: 'Customer number']
+  CUSNM varchar [note: 'Customer name']
+}
+
+Table MBS2REP [note: 'Customer', headerColor: #feca57] {
+  S3CAMB varchar [pk, note: 'Customer number']
+}
