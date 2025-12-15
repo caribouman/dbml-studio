@@ -75,9 +75,11 @@
       "databricksClient.js",
       "dbmlToDatabricksSQL.js",
       "dist/**/*",
+      "public/**/*",
       "data",
       "package.json"
     ],
+    "icon": "public/icon.png",
     "extraResources": [
       {
         "from": "data",

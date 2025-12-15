@@ -175,9 +175,8 @@ function createLoadingWindow() {
           body {
             margin: 0;
             padding: 20px;
-            background: rgba(26, 26, 26, 0.98);
+            background: linear-gradient(180deg, #1a2f4a 0%, #2a5a7f 50%, #3a8faf 100%);
             border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -187,35 +186,43 @@ function createLoadingWindow() {
             color: white;
             box-sizing: border-box;
           }
+          .icon {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 30px;
+            animation: fadeIn 0.8s ease-in-out;
+          }
           .logo {
-            font-size: 48px;
+            font-size: 42px;
             font-weight: bold;
             margin-bottom: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            animation: fadeIn 1s ease-in-out 0.2s both;
           }
           .spinner {
             width: 50px;
             height: 50px;
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-top-color: #667eea;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
             border-radius: 50%;
             animation: spin 1s linear infinite;
           }
           @keyframes spin {
             to { transform: rotate(360deg); }
           }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
           .message {
             margin-top: 20px;
             font-size: 13px;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.9);
             text-align: center;
             padding: 0 30px;
             max-width: 500px;
             line-height: 1.6;
             word-wrap: break-word;
+            animation: fadeIn 1.2s ease-in-out 0.4s both;
           }
           .error {
             color: #ff6b6b;
@@ -235,6 +242,7 @@ function createLoadingWindow() {
         </style>
       </head>
       <body>
+        <img class="icon" src="data:image/png;base64,${fs.readFileSync(path.join(__dirname, 'public', 'icon.png')).toString('base64')}" alt="DBML Studio" />
         <div class="logo">DBML Studio</div>
         <div class="spinner"></div>
         <div class="message" id="message">Initializing...</div>
@@ -337,10 +345,12 @@ function createWindow() {
     console.log('Creating main window');
 
     // Create the browser window
+    const iconPath = path.join(__dirname, 'public', 'icon.png');
     const windowOptions = {
       width: 1400,
       height: 900,
       show: false, // Don't show until ready
+      icon: iconPath,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
