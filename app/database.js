@@ -293,6 +293,10 @@ function deleteDiagramElectron(diagramId) {
   return changes > 0;
 }
 
+function getDatabricksConnection(userId) {
+  return databricksQueries.findByUserId(userId);
+}
+
 module.exports = {
   initDatabase,
   userQueries,
@@ -308,4 +312,5 @@ module.exports = {
   getPublicDiagrams,
   deleteDiagram,
   deleteDiagramElectron,
+  getDatabricksConnection,
 };

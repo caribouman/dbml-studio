@@ -745,6 +745,62 @@ app.post('/api/databricks/convert', authenticateJWT, async (req, res) => {
   }
 });
 
+// List workspace directory contents
+app.get('/api/databricks/workspace/list', authenticateJWT, async (req, res) => {
+  try {
+    const { path } = req.query;
+
+    if (!path) {
+      return res.status(400).json({ error: 'Path is required' });
+    }
+
+    const connection = database.getDatabricksConnection(req.user.id);
+    if (!connection) {
+      return res.status(400).json({ error: 'No Databricks connection configured' });
+    }
+
+    const client = new DatabricksClient(
+      connection.workspace_url,
+      connection.access_token,
+      connection.http_path
+    );
+
+    const objects = await client.listWorkspace(path);
+    res.json({ objects });
+  } catch (error) {
+    console.error('Error listing workspace:', error);
+    res.status(500).json({ error: error.message || 'Failed to list workspace' });
+  }
+});
+
+// Upload DBML file to workspace
+app.post('/api/databricks/workspace/upload', authenticateJWT, async (req, res) => {
+  try {
+    const { path, content, overwrite } = req.body;
+
+    if (!path || !content) {
+      return res.status(400).json({ error: 'Path and content are required' });
+    }
+
+    const connection = database.getDatabricksConnection(req.user.id);
+    if (!connection) {
+      return res.status(400).json({ error: 'No Databricks connection configured' });
+    }
+
+    const client = new DatabricksClient(
+      connection.workspace_url,
+      connection.access_token,
+      connection.http_path
+    );
+
+    const result = await client.uploadToWorkspace(path, content, overwrite !== false);
+    res.json(result);
+  } catch (error) {
+    console.error('Error uploading to workspace:', error);
+    res.status(500).json({ error: error.message || 'Failed to upload file' });
+  }
+});
+
 // ==================== Legacy Routes (for backward compatibility) ====================
 
 // Save table positions (legacy)

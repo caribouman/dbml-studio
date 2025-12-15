@@ -263,6 +263,123 @@ class DatabricksClient {
       return false;
     }
   }
+
+  /**
+   * List workspace directory contents
+   * @param {string} path - Workspace path (e.g., '/Users/user@example.com')
+   * @returns {Promise<Array>} - Array of workspace objects
+   */
+  async listWorkspace(path) {
+    return new Promise((resolve, reject) => {
+      const data = JSON.stringify({ path });
+
+      const options = {
+        hostname: this.hostname,
+        path: '/api/2.0/workspace/list',
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      };
+
+      // Add query parameter for path
+      options.path += `?path=${encodeURIComponent(path)}`;
+
+      const req = this.protocol.request(options, (res) => {
+        let responseData = '';
+
+        res.on('data', (chunk) => {
+          responseData += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            const jsonResponse = JSON.parse(responseData);
+
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              resolve(jsonResponse.objects || []);
+            } else {
+              reject(new Error(jsonResponse.message || `HTTP ${res.statusCode}: ${responseData}`));
+            }
+          } catch (error) {
+            reject(new Error(`Failed to parse response: ${error.message}`));
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        reject(new Error(`Request failed: ${error.message}`));
+      });
+
+      req.end();
+    });
+  }
+
+  /**
+   * Upload file to Databricks workspace
+   * @param {string} path - Target workspace path (e.g., '/Users/user@example.com/schema.dbml')
+   * @param {string} content - File content (base64 encoded)
+   * @param {boolean} overwrite - Whether to overwrite existing file
+   * @returns {Promise<object>} - API response
+   */
+  async uploadToWorkspace(path, content, overwrite = true) {
+    return new Promise((resolve, reject) => {
+      // Encode content to base64 if not already encoded
+      const base64Content = Buffer.from(content).toString('base64');
+
+      const data = JSON.stringify({
+        path,
+        content: base64Content,
+        format: 'TEXT',
+        overwrite
+      });
+
+      const options = {
+        hostname: this.hostname,
+        path: '/api/2.0/workspace/import',
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+          'Content-Length': data.length
+        }
+      };
+
+      const req = this.protocol.request(options, (res) => {
+        let responseData = '';
+
+        res.on('data', (chunk) => {
+          responseData += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              // Success response is often empty for this endpoint
+              resolve({ success: true, path });
+            } else {
+              const jsonResponse = responseData ? JSON.parse(responseData) : {};
+              reject(new Error(jsonResponse.message || `HTTP ${res.statusCode}: ${responseData}`));
+            }
+          } catch (error) {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              resolve({ success: true, path });
+            } else {
+              reject(new Error(`Failed to parse response: ${error.message}`));
+            }
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        reject(new Error(`Request failed: ${error.message}`));
+      });
+
+      req.write(data);
+      req.end();
+    });
+  }
 }
 
 module.exports = DatabricksClient;

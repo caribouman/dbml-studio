@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
 import { parseDBML } from '../utils/dbmlParser';
+import WorkspaceExplorer from './WorkspaceExplorer';
 import '../styles/modal.css';
 import './DatabricksDeployDialog.css';
 
@@ -32,8 +33,15 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
     existing: false,
     tables: true,
     naming: false,
-    preview: false
+    preview: false,
+    workspace: false
   });
+
+  // Workspace upload states
+  const [showWorkspaceExplorer, setShowWorkspaceExplorer] = useState(false);
+  const [workspacePath, setWorkspacePath] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
 
   // Load connection and catalogs on mount
   useEffect(() => {
@@ -224,6 +232,45 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
     }
   };
 
+  const handleWorkspaceUpload = async () => {
+    if (!workspacePath) {
+      setError('Please select a workspace location');
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+    setUploadResult(null);
+
+    try {
+      const response = await apiRequest('/api/databricks/workspace/upload', {
+        method: 'POST',
+        body: JSON.stringify({
+          path: workspacePath,
+          content: dbmlCode,
+          overwrite: true
+        })
+      });
+
+      setUploadResult({
+        success: true,
+        message: `DBML file uploaded successfully to ${workspacePath}`,
+        path: response.path
+      });
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+      setUploadResult({ success: false, message: err.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSelectWorkspacePath = (path) => {
+    setWorkspacePath(path);
+    setUploadResult(null);
+    setError(null);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -400,6 +447,74 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Workspace Upload Section */}
+            <div className="form-section">
+              <div
+                className="section-header collapsible"
+                onClick={() => toggleSection('workspace')}
+              >
+                <div className="section-title">
+                  <span className="section-icon">☁️</span>
+                  <h3>Upload DBML to Workspace</h3>
+                  {uploadResult && (
+                    <span className={`badge ${uploadResult.success ? 'success' : 'error'}`}>
+                      {uploadResult.success ? 'Uploaded' : 'Failed'}
+                    </span>
+                  )}
+                </div>
+                <button className="collapse-btn" type="button" onClick={(e) => e.stopPropagation()}>
+                  {sectionsExpanded.workspace ? '▼' : '▶'}
+                </button>
+              </div>
+
+              {sectionsExpanded.workspace && (
+                <div className="section-content">
+                  <p className="section-description">
+                    Upload the DBML file to your Databricks workspace for documentation or future reference.
+                  </p>
+
+                  <div className="workspace-path-selector">
+                    <label>
+                      <span className="label-icon">📍</span>
+                      Workspace Path:
+                    </label>
+                    <div className="path-input-group">
+                      <input
+                        type="text"
+                        value={workspacePath}
+                        onChange={(e) => setWorkspacePath(e.target.value)}
+                        placeholder="/Users/your.email@company.com/schema.dbml"
+                        readOnly
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setShowWorkspaceExplorer(true)}
+                      >
+                        Browse...
+                      </button>
+                    </div>
+                    <small>Select where to save the DBML file in your Databricks workspace</small>
+                  </div>
+
+                  {uploadResult && (
+                    <div className={`upload-result ${uploadResult.success ? 'success' : 'error'}`}>
+                      {uploadResult.message}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleWorkspaceUpload}
+                    disabled={uploading || !workspacePath}
+                  >
+                    {uploading ? 'Uploading...' : 'Upload to Workspace'}
+                  </button>
                 </div>
               )}
             </div>
@@ -594,6 +709,14 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
             </div>
           </div>
         )}
+
+        {/* Workspace Explorer Modal */}
+        <WorkspaceExplorer
+          isOpen={showWorkspaceExplorer}
+          onClose={() => setShowWorkspaceExplorer(false)}
+          onSelectPath={handleSelectWorkspacePath}
+          currentPath="/Workspace"
+        />
       </div>
     </div>
   );

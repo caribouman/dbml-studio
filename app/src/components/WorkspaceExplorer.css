@@ -1,0 +1,224 @@
+.workspace-explorer {
+  max-width: 700px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.explorer-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+/* Breadcrumbs */
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 13px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.breadcrumb {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #667eea;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.breadcrumb:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.breadcrumb.active,
+.breadcrumb:disabled {
+  color: #333;
+  cursor: default;
+  font-weight: 600;
+}
+
+.breadcrumb-sep {
+  color: #999;
+}
+
+/* Current path input */
+.current-path {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.current-path label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.current-path input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  background: #fafafa;
+}
+
+/* File name input */
+.file-name-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.file-name-input label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.file-name-input input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* Path preview */
+.path-preview {
+  padding: 10px 12px;
+  background: #e8f4f8;
+  border: 1px solid #b3d9e6;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #2c5f7a;
+  font-family: 'Consolas', 'Monaco', monospace;
+  word-break: break-all;
+}
+
+.path-preview strong {
+  color: #1a4d66;
+  margin-right: 8px;
+}
+
+/* Directory listing */
+.directory-list {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  overflow-y: auto;
+  min-height: 200px;
+  max-height: 300px;
+}
+
+.directory-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.directory-item:last-child {
+  border-bottom: none;
+}
+
+.directory-item:hover {
+  background: #f8f9fa;
+}
+
+.directory-item.parent {
+  background: #fafafa;
+  font-weight: 600;
+  color: #555;
+}
+
+.directory-item.parent:hover {
+  background: #f0f0f0;
+}
+
+.dir-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.dir-name {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.directory-item.parent .dir-name {
+  color: #666;
+}
+
+.directory-item.file-item {
+  background: #fff;
+  opacity: 0.7;
+}
+
+.directory-item.file-item:hover {
+  background: #fff;
+  opacity: 0.8;
+  cursor: default;
+}
+
+.item-type {
+  font-size: 11px;
+  color: #999;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  margin-left: auto;
+}
+
+/* Messages */
+.loading-message,
+.empty-message {
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.explorer-hint {
+  padding: 12px;
+  background: #fffbea;
+  border: 1px solid #f4e5b2;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #8b7300;
+  line-height: 1.5;
+}
+
+.explorer-hint strong {
+  color: #6b5600;
+  margin-right: 6px;
+}
+
+.label-icon {
+  font-size: 14px;
+}
