@@ -63,7 +63,8 @@
     "appId": "com.dbmlstudio.app",
     "productName": "DBML Studio",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "asar": false,
     "files": [
@@ -79,7 +80,6 @@
       "data",
       "package.json"
     ],
-    "icon": "public/icon.png",
     "extraResources": [
       {
         "from": "data",
@@ -90,6 +90,7 @@
       }
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
