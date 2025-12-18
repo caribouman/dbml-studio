@@ -150,23 +150,7 @@ function App() {
       });
       console.log('[Quick Save] Python notebook uploaded successfully');
 
-      // Also upload a simple .dbml file alongside the notebook
-      const dbmlPath = loadedDatabricksPath.replace(/\.py$/, '.dbml');
-      console.log('[Quick Save] Uploading .dbml file to:', dbmlPath);
-      console.log('[Quick Save] DBML content length:', dbmlCode.length);
-
-      await apiRequest('/api/databricks/workspace/upload', {
-        method: 'POST',
-        body: JSON.stringify({
-          path: dbmlPath,
-          content: dbmlCode,
-          overwrite: true,
-          wrapInNotebook: false
-        })
-      });
-      console.log('[Quick Save] .dbml file uploaded successfully');
-
-      alert(`Saved successfully!\n- ${loadedDatabricksPath}\n- ${dbmlPath}`);
+      alert(`Saved successfully to ${loadedDatabricksPath}`);
     } catch (error) {
       console.error('[Quick Save] Failed:', error);
       alert(`Failed to save: ${error.message}`);

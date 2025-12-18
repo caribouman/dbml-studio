@@ -327,27 +327,16 @@ class DatabricksClient {
   async uploadToWorkspace(path, content, overwrite = true, wrapInNotebook = true) {
     return new Promise(async (resolve, reject) => {
       try {
-        let finalContent = content;
-        let format = 'TEXT';
-        let language = undefined;
-
-        // For TEXT format files with overwrite=true, delete first then upload
-        // This avoids the "Overwrite cannot be used for source format when importing a folder" error
-        if (!wrapInNotebook && overwrite) {
-          console.log('[DatabricksClient] Deleting existing file before upload:', path);
-          try {
-            await this.deleteFromWorkspace(path);
-          } catch (deleteError) {
-            console.warn('[DatabricksClient] Delete failed (file may not exist):', deleteError.message);
-            // Continue with upload even if delete fails
-          }
-        }
-
-        // Wrap JSON content in a Python notebook format so Databricks can handle it
-        // This allows the file to be stored in the workspace as a readable source file
-        if (wrapInNotebook) {
         const timestamp = new Date().toISOString();
-        finalContent = `# Databricks notebook source
+        let finalContent;
+        const format = 'SOURCE'; // Always use SOURCE format (notebooks)
+        const language = 'PYTHON'; // Always Python notebooks
+
+        // Wrap content in a Python notebook format
+        // Databricks workspace/import API only accepts notebook formats
+        if (wrapInNotebook) {
+          // Full diagram notebook with JSON data and positions
+          finalContent = `# Databricks notebook source
 # MAGIC %md
 # MAGIC # DBML Studio Diagram
 # MAGIC
@@ -371,8 +360,29 @@ ${content}
 #
 # Last modified: ${timestamp}
 `;
-        format = 'SOURCE';
-        language = 'PYTHON';
+        } else {
+          // Simple DBML notebook (plain DBML code)
+          finalContent = `# Databricks notebook source
+# MAGIC %md
+# MAGIC # DBML File
+# MAGIC
+# MAGIC Plain DBML code for database schema.
+# MAGIC
+# MAGIC **Last updated:** ${timestamp}
+
+# COMMAND ----------
+
+# DBML Code:
+"""
+${content}
+"""
+
+# COMMAND ----------
+
+# This is a plain DBML file that can be used with DBML tools
+# Last modified: ${timestamp}
+`;
+        }
       }
 
       // Encode content to base64
@@ -386,13 +396,10 @@ ${content}
       };
 
       // Add language for notebook format
-      if (language) {
-        requestData.language = language;
-      }
+      requestData.language = language;
 
-      // Only add overwrite for notebook files (SOURCE format)
-      // For TEXT files, we delete first instead of using overwrite
-      if (overwrite && wrapInNotebook) {
+      // Add overwrite flag for SOURCE format (always used now)
+      if (overwrite) {
         requestData.overwrite = true;
       }
 
