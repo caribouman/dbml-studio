@@ -129,6 +129,8 @@ function App() {
     if (!loadedDatabricksPath || !isAuthenticated) return;
 
     try {
+      console.log('[Quick Save] Starting save to:', loadedDatabricksPath);
+
       // Create diagram data with DBML code and positions
       const diagramData = {
         dbml_code: dbmlCode,
@@ -137,6 +139,7 @@ function App() {
       };
 
       // Upload the Python notebook with diagram data
+      console.log('[Quick Save] Uploading Python notebook...');
       await apiRequest('/api/databricks/workspace/upload', {
         method: 'POST',
         body: JSON.stringify({
@@ -145,26 +148,27 @@ function App() {
           overwrite: true
         })
       });
+      console.log('[Quick Save] Python notebook uploaded successfully');
 
       // Also upload a simple .dbml file alongside the notebook
       const dbmlPath = loadedDatabricksPath.replace(/\.py$/, '.dbml');
-      try {
-        await apiRequest('/api/databricks/workspace/upload', {
-          method: 'POST',
-          body: JSON.stringify({
-            path: dbmlPath,
-            content: dbmlCode,
-            overwrite: true,
-            wrapInNotebook: false
-          })
-        });
-      } catch (dbmlError) {
-        console.warn('Failed to upload .dbml file:', dbmlError);
-      }
+      console.log('[Quick Save] Uploading .dbml file to:', dbmlPath);
+      console.log('[Quick Save] DBML content length:', dbmlCode.length);
 
-      alert('Diagram saved successfully to Databricks!');
+      await apiRequest('/api/databricks/workspace/upload', {
+        method: 'POST',
+        body: JSON.stringify({
+          path: dbmlPath,
+          content: dbmlCode,
+          overwrite: true,
+          wrapInNotebook: false
+        })
+      });
+      console.log('[Quick Save] .dbml file uploaded successfully');
+
+      alert(`Saved successfully!\n- ${loadedDatabricksPath}\n- ${dbmlPath}`);
     } catch (error) {
-      console.error('Quick save failed:', error);
+      console.error('[Quick Save] Failed:', error);
       alert(`Failed to save: ${error.message}`);
     }
   }, [loadedDatabricksPath, dbmlCode, viewerPositions, isAuthenticated]);

@@ -282,24 +282,24 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions, loadedFi
 
       // Also upload a simple .dbml file alongside the notebook
       const dbmlPath = workspacePath.replace(/\.py$/, '.dbml');
-      try {
-        await apiRequest('/api/databricks/workspace/upload', {
-          method: 'POST',
-          body: JSON.stringify({
-            path: dbmlPath,
-            content: dbmlCode,
-            overwrite: isUpdating,
-            wrapInNotebook: false // Upload as plain text
-          })
-        });
-      } catch (dbmlError) {
-        console.warn('Failed to upload .dbml file:', dbmlError);
-        // Don't fail the whole operation if .dbml upload fails
-      }
+      console.log('[Workspace Upload] Uploading .dbml file to:', dbmlPath);
+      console.log('[Workspace Upload] DBML content length:', dbmlCode.length);
+      console.log('[Workspace Upload] wrapInNotebook:', false);
+
+      await apiRequest('/api/databricks/workspace/upload', {
+        method: 'POST',
+        body: JSON.stringify({
+          path: dbmlPath,
+          content: dbmlCode,
+          overwrite: isUpdating,
+          wrapInNotebook: false // Upload as plain text
+        })
+      });
+      console.log('[Workspace Upload] .dbml file uploaded successfully');
 
       setUploadResult({
         success: true,
-        message: `Diagram file ${isUpdating ? 'updated' : 'created'} successfully at ${workspacePath} (+ ${dbmlPath})`,
+        message: `Files saved successfully:\n- ${workspacePath}\n- ${dbmlPath}`,
         path: response.path
       });
 
