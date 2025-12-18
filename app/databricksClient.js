@@ -325,14 +325,27 @@ class DatabricksClient {
    * @returns {Promise<object>} - API response
    */
   async uploadToWorkspace(path, content, overwrite = true, wrapInNotebook = true) {
-    return new Promise((resolve, reject) => {
-      let finalContent = content;
-      let format = 'TEXT';
-      let language = undefined;
+    return new Promise(async (resolve, reject) => {
+      try {
+        let finalContent = content;
+        let format = 'TEXT';
+        let language = undefined;
 
-      // Wrap JSON content in a Python notebook format so Databricks can handle it
-      // This allows the file to be stored in the workspace as a readable source file
-      if (wrapInNotebook) {
+        // For TEXT format files with overwrite=true, delete first then upload
+        // This avoids the "Overwrite cannot be used for source format when importing a folder" error
+        if (!wrapInNotebook && overwrite) {
+          console.log('[DatabricksClient] Deleting existing file before upload:', path);
+          try {
+            await this.deleteFromWorkspace(path);
+          } catch (deleteError) {
+            console.warn('[DatabricksClient] Delete failed (file may not exist):', deleteError.message);
+            // Continue with upload even if delete fails
+          }
+        }
+
+        // Wrap JSON content in a Python notebook format so Databricks can handle it
+        // This allows the file to be stored in the workspace as a readable source file
+        if (wrapInNotebook) {
         const timestamp = new Date().toISOString();
         finalContent = `# Databricks notebook source
 # MAGIC %md
@@ -377,8 +390,9 @@ ${content}
         requestData.language = language;
       }
 
-      // Only add overwrite if needed
-      if (overwrite) {
+      // Only add overwrite for notebook files (SOURCE format)
+      // For TEXT files, we delete first instead of using overwrite
+      if (overwrite && wrapInNotebook) {
         requestData.overwrite = true;
       }
 
@@ -447,6 +461,9 @@ ${content}
 
       req.write(data);
       req.end();
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
@@ -507,6 +524,63 @@ ${content}
         reject(new Error(`Request failed: ${error.message}`));
       });
 
+      req.end();
+    });
+  }
+
+  /**
+   * Delete file from Databricks workspace
+   * @param {string} path - Workspace path to delete (e.g., '/Users/user@example.com/schema.dbml')
+   * @returns {Promise<object>} - API response
+   */
+  async deleteFromWorkspace(path) {
+    return new Promise((resolve, reject) => {
+      const data = JSON.stringify({ path });
+
+      const options = {
+        hostname: this.hostname,
+        path: '/api/2.0/workspace/delete',
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+          'Content-Length': data.length
+        }
+      };
+
+      const req = this.protocol.request(options, (res) => {
+        let responseData = '';
+
+        res.on('data', (chunk) => {
+          responseData += chunk;
+        });
+
+        res.on('end', () => {
+          console.log('[DatabricksClient] Delete response status:', res.statusCode);
+          console.log('[DatabricksClient] Delete response data:', responseData);
+
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            console.log('[DatabricksClient] Delete successful');
+            resolve({ success: true, path });
+          } else {
+            // If file doesn't exist, that's OK for our use case
+            if (res.statusCode === 404) {
+              console.log('[DatabricksClient] File does not exist (404), continuing...');
+              resolve({ success: true, path, fileDidNotExist: true });
+            } else {
+              const jsonResponse = responseData ? JSON.parse(responseData) : {};
+              console.error('[DatabricksClient] Delete failed:', jsonResponse);
+              reject(new Error(jsonResponse.message || `HTTP ${res.statusCode}: ${responseData}`));
+            }
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        reject(new Error(`Delete request failed: ${error.message}`));
+      });
+
+      req.write(data);
       req.end();
     });
   }
