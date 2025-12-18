@@ -801,6 +801,34 @@ app.post('/api/databricks/workspace/upload', authenticateJWT, async (req, res) =
   }
 });
 
+// Download DBML file from workspace
+app.get('/api/databricks/workspace/download', authenticateJWT, async (req, res) => {
+  try {
+    const { path } = req.query;
+
+    if (!path) {
+      return res.status(400).json({ error: 'Path is required' });
+    }
+
+    const connection = database.getDatabricksConnection(req.user.id);
+    if (!connection) {
+      return res.status(400).json({ error: 'No Databricks connection configured' });
+    }
+
+    const client = new DatabricksClient(
+      connection.workspace_url,
+      connection.access_token,
+      connection.http_path
+    );
+
+    const content = await client.downloadFromWorkspace(path);
+    res.json({ content, path });
+  } catch (error) {
+    console.error('Error downloading from workspace:', error);
+    res.status(500).json({ error: error.message || 'Failed to download file' });
+  }
+});
+
 // ==================== Legacy Routes (for backward compatibility) ====================
 
 // Save table positions (legacy)

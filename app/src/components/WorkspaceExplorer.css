@@ -180,9 +180,21 @@
 }
 
 .directory-item.file-item:hover {
-  background: #fff;
-  opacity: 0.8;
-  cursor: default;
+  background: #f8f9fa;
+  opacity: 1;
+}
+
+.directory-item.selected {
+  background: #e8f4f8 !important;
+  border: 1px solid #667eea;
+  opacity: 1 !important;
+}
+
+.selected-indicator {
+  font-size: 16px;
+  color: #667eea;
+  font-weight: bold;
+  margin-left: auto;
 }
 
 .item-type {

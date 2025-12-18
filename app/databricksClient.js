@@ -325,15 +325,46 @@ class DatabricksClient {
    */
   async uploadToWorkspace(path, content, overwrite = true) {
     return new Promise((resolve, reject) => {
-      // Encode content to base64 if not already encoded
-      const base64Content = Buffer.from(content).toString('base64');
+      // Wrap JSON content in a Python notebook format so Databricks can handle it
+      // This allows the file to be stored in the workspace as a readable source file
+      const wrappedContent = `# Databricks notebook source
+# MAGIC %md
+# MAGIC # DBML Studio Diagram
+# MAGIC
+# MAGIC This file contains a DBML diagram with table positions.
+# MAGIC The JSON data is stored in the cell below.
 
-      const data = JSON.stringify({
+# COMMAND ----------
+
+diagram_json = """
+${content}
+"""
+
+# COMMAND ----------
+
+# To load this diagram in DBML Studio:
+# 1. Click "Load from Databricks"
+# 2. Select this file
+# 3. The JSON will be extracted and loaded automatically
+`;
+
+      // Encode content to base64
+      const base64Content = Buffer.from(wrappedContent).toString('base64');
+
+      // Build request data with SOURCE format for Python notebook
+      const requestData = {
         path,
         content: base64Content,
-        format: 'TEXT',
-        overwrite
-      });
+        language: 'PYTHON',
+        format: 'SOURCE'
+      };
+
+      // Only add overwrite if needed
+      if (overwrite) {
+        requestData.overwrite = true;
+      }
+
+      const data = JSON.stringify(requestData);
 
       const options = {
         hostname: this.hostname,
@@ -377,6 +408,67 @@ class DatabricksClient {
       });
 
       req.write(data);
+      req.end();
+    });
+  }
+
+  /**
+   * Download file from Databricks workspace
+   * @param {string} path - Workspace path to download (e.g., '/Users/user@example.com/schema.dbml')
+   * @returns {Promise<string>} - File content as text
+   */
+  async downloadFromWorkspace(path) {
+    return new Promise((resolve, reject) => {
+      const options = {
+        hostname: this.hostname,
+        path: `/api/2.0/workspace/export?path=${encodeURIComponent(path)}&format=SOURCE`,
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const req = this.protocol.request(options, (res) => {
+        let responseData = '';
+
+        res.on('data', (chunk) => {
+          responseData += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            const jsonResponse = JSON.parse(responseData);
+
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              // Content is base64 encoded
+              if (jsonResponse.content) {
+                let content = Buffer.from(jsonResponse.content, 'base64').toString('utf-8');
+
+                // Extract JSON from Python notebook wrapper if present
+                const jsonMatch = content.match(/diagram_json\s*=\s*"""([\s\S]*?)"""/);
+                if (jsonMatch && jsonMatch[1]) {
+                  // Found wrapped JSON, extract it
+                  content = jsonMatch[1].trim();
+                }
+
+                resolve(content);
+              } else {
+                reject(new Error('No content in response'));
+              }
+            } else {
+              reject(new Error(jsonResponse.message || `HTTP ${res.statusCode}: ${responseData}`));
+            }
+          } catch (error) {
+            reject(new Error(`Failed to parse response: ${error.message}`));
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        reject(new Error(`Request failed: ${error.message}`));
+      });
+
       req.end();
     });
   }

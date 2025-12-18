@@ -8,6 +8,7 @@ import SaveDiagramDialog from './components/SaveDiagramDialog';
 import UserMenu from './components/UserMenu';
 import DatabricksConnection from './components/DatabricksConnection';
 import DatabricksDeployDialog from './components/DatabricksDeployDialog';
+import LoadFromDatabricksDialog from './components/LoadFromDatabricksDialog';
 import { useAuthStore } from './stores/authStore';
 import './App.css';
 
@@ -33,11 +34,12 @@ function App() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showDatabricksConnection, setShowDatabricksConnection] = useState(false);
   const [showDatabricksDeploy, setShowDatabricksDeploy] = useState(false);
+  const [showDatabricksLoad, setShowDatabricksLoad] = useState(false);
   const [currentDiagram, setCurrentDiagram] = useState(null);
   const [viewerPositions, setViewerPositions] = useState(null);
 
   // Check if any modal is open
-  const isAnyModalOpen = showAuthModal || showLibrary || showSaveDialog || showDatabricksConnection || showDatabricksDeploy;
+  const isAnyModalOpen = showAuthModal || showLibrary || showSaveDialog || showDatabricksConnection || showDatabricksDeploy || showDatabricksLoad;
 
   // Handle OAuth callback and initialize auth
   useEffect(() => {
@@ -105,6 +107,21 @@ function App() {
     setShowDatabricksDeploy(true);
   }, [isAuthenticated, dbmlCode]);
 
+  const handleOpenDatabricksLoad = useCallback(() => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    setShowDatabricksLoad(true);
+  }, [isAuthenticated]);
+
+  const handleLoadDbmlFromDatabricks = useCallback((dbmlContent, positions) => {
+    setDbmlCode(dbmlContent);
+    setViewerPositions(positions || null); // Load positions if available
+    setCurrentDiagram(null); // Reset current diagram
+    setShowDatabricksLoad(false);
+  }, []);
+
   return (
     <div className="app">
       <div className="app-header">
@@ -112,6 +129,13 @@ function App() {
         <div className="app-header-actions">
           {isAuthenticated && isElectron && (
             <>
+              <button
+                className="btn btn-databricks"
+                onClick={handleOpenDatabricksLoad}
+                title="Load DBML file from Databricks workspace"
+              >
+                Load from Databricks
+              </button>
               <button
                 className="btn btn-databricks"
                 onClick={handleOpenDatabricksDeploy}
@@ -213,6 +237,13 @@ function App() {
         isOpen={showDatabricksDeploy}
         onClose={() => setShowDatabricksDeploy(false)}
         dbmlCode={dbmlCode}
+        positions={viewerPositions}
+      />
+
+      <LoadFromDatabricksDialog
+        isOpen={showDatabricksLoad}
+        onClose={() => setShowDatabricksLoad(false)}
+        onLoadDbml={handleLoadDbmlFromDatabricks}
       />
     </div>
   );

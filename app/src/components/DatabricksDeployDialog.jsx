@@ -8,7 +8,7 @@ import './DatabricksDeployDialog.css';
 /**
  * Dialog for deploying tables to Databricks
  */
-function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
+function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions }) {
   const [catalogs, setCatalogs] = useState([]);
   const [schemas, setSchemas] = useState([]);
   const [tables, setTables] = useState([]);
@@ -39,6 +39,7 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
 
   // Workspace upload states
   const [showWorkspaceExplorer, setShowWorkspaceExplorer] = useState(false);
+  const [workspaceExplorerMode, setWorkspaceExplorerMode] = useState('create'); // 'create' or 'select'
   const [workspacePath, setWorkspacePath] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
@@ -243,18 +244,29 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
     setUploadResult(null);
 
     try {
+      // Create a JSON object with both DBML code and positions
+      const diagramData = {
+        dbml_code: dbmlCode,
+        positions: positions || {},
+        updated_at: new Date().toISOString()
+      };
+
+      // Use overwrite: true only when updating an existing file (select mode)
+      // For new files (create mode), use overwrite: false or omit it
+      const isUpdating = workspaceExplorerMode === 'select';
+
       const response = await apiRequest('/api/databricks/workspace/upload', {
         method: 'POST',
         body: JSON.stringify({
           path: workspacePath,
-          content: dbmlCode,
-          overwrite: true
+          content: JSON.stringify(diagramData, null, 2), // Pretty print JSON
+          overwrite: isUpdating
         })
       });
 
       setUploadResult({
         success: true,
-        message: `DBML file uploaded successfully to ${workspacePath}`,
+        message: `Diagram file ${isUpdating ? 'updated' : 'created'} successfully at ${workspacePath}`,
         path: response.path
       });
     } catch (err) {
@@ -265,10 +277,43 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
     }
   };
 
-  const handleSelectWorkspacePath = (path) => {
+  const handleSelectWorkspacePath = async (path) => {
     setWorkspacePath(path);
     setUploadResult(null);
     setError(null);
+
+    // If we're in select mode, download the file content
+    if (workspaceExplorerMode === 'select') {
+      setUploading(true);
+      try {
+        const response = await apiRequest(`/api/databricks/workspace/download?path=${encodeURIComponent(path)}`);
+
+        // Show success message
+        setUploadResult({
+          success: true,
+          message: `File loaded from ${path}. You can now update it by clicking "Upload to Workspace".`,
+          path: response.path
+        });
+      } catch (err) {
+        setError(err.message || 'Failed to download file');
+        setUploadResult({
+          success: false,
+          message: err.message
+        });
+      } finally {
+        setUploading(false);
+      }
+    }
+  };
+
+  const handleBrowseForNewFile = () => {
+    setWorkspaceExplorerMode('create');
+    setShowWorkspaceExplorer(true);
+  };
+
+  const handleBrowseForExistingFile = () => {
+    setWorkspaceExplorerMode('select');
+    setShowWorkspaceExplorer(true);
   };
 
   if (!isOpen) return null;
@@ -459,7 +504,7 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
               >
                 <div className="section-title">
                   <span className="section-icon">☁️</span>
-                  <h3>Upload DBML to Workspace</h3>
+                  <h3>Save Diagram to Workspace</h3>
                   {uploadResult && (
                     <span className={`badge ${uploadResult.success ? 'success' : 'error'}`}>
                       {uploadResult.success ? 'Uploaded' : 'Failed'}
@@ -474,7 +519,7 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
               {sectionsExpanded.workspace && (
                 <div className="section-content">
                   <p className="section-description">
-                    Upload the DBML file to your Databricks workspace for documentation or future reference.
+                    Save the diagram (DBML code + table positions) to your Databricks workspace as a Python notebook.
                   </p>
 
                   <div className="workspace-path-selector">
@@ -487,18 +532,27 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
                         type="text"
                         value={workspacePath}
                         onChange={(e) => setWorkspacePath(e.target.value)}
-                        placeholder="/Users/your.email@company.com/schema.dbml"
+                        placeholder="/Users/your.email@company.com/dbml_diagram.py"
                         readOnly
                       />
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        onClick={() => setShowWorkspaceExplorer(true)}
+                        onClick={handleBrowseForNewFile}
+                        title="Create a new file"
                       >
-                        Browse...
+                        New...
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={handleBrowseForExistingFile}
+                        title="Select an existing file to update"
+                      >
+                        Select Existing...
                       </button>
                     </div>
-                    <small>Select where to save the DBML file in your Databricks workspace</small>
+                    <small>Create a new file or select an existing diagram file to update in your Databricks workspace</small>
                   </div>
 
                   {uploadResult && (
@@ -716,6 +770,7 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode }) {
           onClose={() => setShowWorkspaceExplorer(false)}
           onSelectPath={handleSelectWorkspacePath}
           currentPath="/Workspace"
+          mode={workspaceExplorerMode}
         />
       </div>
     </div>
