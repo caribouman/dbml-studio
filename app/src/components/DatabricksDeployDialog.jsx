@@ -8,7 +8,7 @@ import './DatabricksDeployDialog.css';
 /**
  * Dialog for deploying tables to Databricks
  */
-function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions }) {
+function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions, loadedFilePath, onSaved }) {
   const [catalogs, setCatalogs] = useState([]);
   const [schemas, setSchemas] = useState([]);
   const [tables, setTables] = useState([]);
@@ -43,6 +43,14 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions }) {
   const [workspacePath, setWorkspacePath] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
+
+  // Set workspace path from loadedFilePath when available
+  useEffect(() => {
+    if (loadedFilePath) {
+      setWorkspacePath(loadedFilePath);
+      setWorkspaceExplorerMode('select'); // Treat as existing file
+    }
+  }, [loadedFilePath]);
 
   // Load connection and catalogs on mount
   useEffect(() => {
@@ -262,6 +270,7 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions }) {
         overwrite: isUpdating
       });
 
+      // Upload the Python notebook with diagram data
       const response = await apiRequest('/api/databricks/workspace/upload', {
         method: 'POST',
         body: JSON.stringify({
@@ -271,11 +280,33 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions }) {
         })
       });
 
+      // Also upload a simple .dbml file alongside the notebook
+      const dbmlPath = workspacePath.replace(/\.py$/, '.dbml');
+      try {
+        await apiRequest('/api/databricks/workspace/upload', {
+          method: 'POST',
+          body: JSON.stringify({
+            path: dbmlPath,
+            content: dbmlCode,
+            overwrite: isUpdating,
+            wrapInNotebook: false // Upload as plain text
+          })
+        });
+      } catch (dbmlError) {
+        console.warn('Failed to upload .dbml file:', dbmlError);
+        // Don't fail the whole operation if .dbml upload fails
+      }
+
       setUploadResult({
         success: true,
-        message: `Diagram file ${isUpdating ? 'updated' : 'created'} successfully at ${workspacePath}`,
+        message: `Diagram file ${isUpdating ? 'updated' : 'created'} successfully at ${workspacePath} (+ ${dbmlPath})`,
         path: response.path
       });
+
+      // Call onSaved callback if provided
+      if (onSaved) {
+        onSaved();
+      }
     } catch (err) {
       setError(err.message || 'Upload failed');
       setUploadResult({ success: false, message: err.message });
@@ -528,6 +559,29 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions }) {
                   <p className="section-description">
                     Save the diagram (DBML code + table positions) to your Databricks workspace as a Python notebook.
                   </p>
+
+                  {/* Quick Save button when file was loaded from Databricks */}
+                  {loadedFilePath && (
+                    <div style={{ marginBottom: '16px', padding: '12px', background: '#e8f4f8', borderRadius: '4px', border: '1px solid #667eea' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ flex: 1 }}>
+                          <strong>📂 Loaded from:</strong> {loadedFilePath}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={handleWorkspaceUpload}
+                          disabled={uploading}
+                          style={{ minWidth: '120px' }}
+                        >
+                          {uploading ? 'Saving...' : '💾 Quick Save'}
+                        </button>
+                      </div>
+                      <small style={{ display: 'block', marginTop: '8px', color: '#666' }}>
+                        Click "Quick Save" to update the file at its original location
+                      </small>
+                    </div>
+                  )}
 
                   <div className="workspace-path-selector">
                     <label>

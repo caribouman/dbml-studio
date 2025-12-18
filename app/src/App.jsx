@@ -37,6 +37,7 @@ function App() {
   const [showDatabricksLoad, setShowDatabricksLoad] = useState(false);
   const [currentDiagram, setCurrentDiagram] = useState(null);
   const [viewerPositions, setViewerPositions] = useState(null);
+  const [loadedDatabricksPath, setLoadedDatabricksPath] = useState(null);
 
   // Check if any modal is open
   const isAnyModalOpen = showAuthModal || showLibrary || showSaveDialog || showDatabricksConnection || showDatabricksDeploy || showDatabricksLoad;
@@ -115,10 +116,11 @@ function App() {
     setShowDatabricksLoad(true);
   }, [isAuthenticated]);
 
-  const handleLoadDbmlFromDatabricks = useCallback((dbmlContent, positions) => {
+  const handleLoadDbmlFromDatabricks = useCallback((dbmlContent, positions, filePath) => {
     setDbmlCode(dbmlContent);
     setViewerPositions(positions || null); // Load positions if available
     setCurrentDiagram(null); // Reset current diagram
+    setLoadedDatabricksPath(filePath); // Remember the loaded file path
     setShowDatabricksLoad(false);
   }, []);
 
@@ -238,6 +240,10 @@ function App() {
         onClose={() => setShowDatabricksDeploy(false)}
         dbmlCode={dbmlCode}
         positions={viewerPositions}
+        loadedFilePath={loadedDatabricksPath}
+        onSaved={() => {
+          // File saved successfully, keep the path for future saves
+        }}
       />
 
       <LoadFromDatabricksDialog

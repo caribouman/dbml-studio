@@ -91,7 +91,7 @@ function LoadFromDatabricksDialog({ isOpen, onClose, onLoadDbml }) {
 
   const handleLoadIntoEditor = () => {
     if (loadedContent && loadedContent.dbmlCode) {
-      onLoadDbml(loadedContent.dbmlCode, loadedContent.positions);
+      onLoadDbml(loadedContent.dbmlCode, loadedContent.positions, loadedContent.path);
       onClose();
     }
   };

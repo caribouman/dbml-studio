@@ -321,14 +321,20 @@ class DatabricksClient {
    * @param {string} path - Target workspace path (e.g., '/Users/user@example.com/schema.dbml')
    * @param {string} content - File content (base64 encoded)
    * @param {boolean} overwrite - Whether to overwrite existing file
+   * @param {boolean} wrapInNotebook - Whether to wrap content in Python notebook format (default: true)
    * @returns {Promise<object>} - API response
    */
-  async uploadToWorkspace(path, content, overwrite = true) {
+  async uploadToWorkspace(path, content, overwrite = true, wrapInNotebook = true) {
     return new Promise((resolve, reject) => {
+      let finalContent = content;
+      let format = 'TEXT';
+      let language = undefined;
+
       // Wrap JSON content in a Python notebook format so Databricks can handle it
       // This allows the file to be stored in the workspace as a readable source file
-      const timestamp = new Date().toISOString();
-      const wrappedContent = `# Databricks notebook source
+      if (wrapInNotebook) {
+        const timestamp = new Date().toISOString();
+        finalContent = `# Databricks notebook source
 # MAGIC %md
 # MAGIC # DBML Studio Diagram
 # MAGIC
@@ -352,17 +358,24 @@ ${content}
 #
 # Last modified: ${timestamp}
 `;
+        format = 'SOURCE';
+        language = 'PYTHON';
+      }
 
       // Encode content to base64
-      const base64Content = Buffer.from(wrappedContent).toString('base64');
+      const base64Content = Buffer.from(finalContent).toString('base64');
 
-      // Build request data with SOURCE format for Python notebook
+      // Build request data
       const requestData = {
         path,
         content: base64Content,
-        language: 'PYTHON',
-        format: 'SOURCE'
+        format: format
       };
+
+      // Add language for notebook format
+      if (language) {
+        requestData.language = language;
+      }
 
       // Only add overwrite if needed
       if (overwrite) {

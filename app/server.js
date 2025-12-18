@@ -776,12 +776,13 @@ app.get('/api/databricks/workspace/list', authenticateJWT, async (req, res) => {
 // Upload DBML file to workspace
 app.post('/api/databricks/workspace/upload', authenticateJWT, async (req, res) => {
   try {
-    const { path, content, overwrite } = req.body;
+    const { path, content, overwrite, wrapInNotebook } = req.body;
 
     console.log('[Server] Workspace upload request:', JSON.stringify({
       path,
       contentLength: content?.length,
       overwrite,
+      wrapInNotebook,
       overwriteValue: overwrite !== false
     }, null, 2));
 
@@ -800,7 +801,12 @@ app.post('/api/databricks/workspace/upload', authenticateJWT, async (req, res) =
       connection.http_path
     );
 
-    const result = await client.uploadToWorkspace(path, content, overwrite !== false);
+    const result = await client.uploadToWorkspace(
+      path,
+      content,
+      overwrite !== false,
+      wrapInNotebook !== false // Default to true if not specified
+    );
     console.log('[Server] Upload successful:', result);
     res.json(result);
   } catch (error) {
