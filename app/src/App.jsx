@@ -188,7 +188,12 @@ function App() {
                   className="btn btn-primary"
                   onClick={handleQuickSave}
                   title={`Quick save to ${loadedDatabricksPath}`}
-                  style={{ background: '#28a745', borderColor: '#28a745' }}
+                  style={{
+                    background: '#0d6efd',
+                    borderColor: '#0d6efd',
+                    color: '#ffffff',
+                    fontWeight: '600'
+                  }}
                 >
                   💾 Quick Save
                 </button>

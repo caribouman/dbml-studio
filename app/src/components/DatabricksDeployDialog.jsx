@@ -589,18 +589,10 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions, loadedFi
                         onClick={handleBrowseForNewFile}
                         title="Create a new file"
                       >
-                        New...
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={handleBrowseForExistingFile}
-                        title="Select an existing file to update"
-                      >
-                        Select Existing...
+                        Browse...
                       </button>
                     </div>
-                    <small>Create a new file or select an existing diagram file to update in your Databricks workspace</small>
+                    <small>Select where to save the DBML file in your Databricks workspace</small>
                   </div>
 
                   {uploadResult && (
