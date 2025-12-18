@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { EditorView } from '@codemirror/view';
+import { EditorView, Decoration } from '@codemirror/view';
+import { StateField, StateEffect } from '@codemirror/state';
 import { parseDBML } from '../utils/dbmlParser';
 import './DBMLEditor.css';
 
@@ -39,11 +40,62 @@ Ref: posts.author_id > users.id
 Ref: comments.post_id > posts.id
 Ref: comments.user_id > users.id`;
 
+// Effect to set error markers
+const setErrorEffect = StateEffect.define();
+
+// Error marker decoration
+const errorMark = Decoration.mark({
+  attributes: { style: "background-color: rgba(255, 0, 0, 0.3); text-decoration: wavy underline red;" }
+});
+
+const errorLineMark = Decoration.line({
+  attributes: { style: "background-color: rgba(255, 0, 0, 0.1);" }
+});
+
+// StateField to manage error decorations
+const errorField = StateField.define({
+  create() {
+    return Decoration.none;
+  },
+  update(decorations, tr) {
+    for (let effect of tr.effects) {
+      if (effect.is(setErrorEffect)) {
+        const { line, column, length = 1 } = effect.value;
+        if (line && column) {
+          try {
+            const doc = tr.state.doc;
+            const lineObj = doc.line(line);
+            const from = lineObj.from + column - 1;
+            const to = Math.min(from + length, lineObj.to);
+
+            const marks = [];
+            // Add line highlight
+            marks.push(errorLineMark.range(lineObj.from));
+            // Add text underline
+            if (from < to) {
+              marks.push(errorMark.range(from, to));
+            }
+            return Decoration.set(marks);
+          } catch (e) {
+            console.warn('Error creating decoration:', e);
+            return Decoration.none;
+          }
+        }
+        return Decoration.none;
+      }
+    }
+    return decorations;
+  },
+  provide: f => EditorView.decorations.from(f)
+});
+
 function DBMLEditor({ value, onChange, onParse }) {
   const [error, setError] = useState(null);
+  const [errorLocation, setErrorLocation] = useState(null);
   const [debounceTimer, setDebounceTimer] = useState(null);
   const initialParseRef = useRef(false);
   const lastExternalValueRef = useRef(value);
+  const editorViewRef = useRef(null);
 
   const handleChange = useCallback((val) => {
     onChange(val);
@@ -66,9 +118,29 @@ function DBMLEditor({ value, onChange, onParse }) {
       try {
         const result = parseDBML(val);
         setError(null);
+        setErrorLocation(null);
+        // Clear error markers
+        if (editorViewRef.current) {
+          editorViewRef.current.dispatch({
+            effects: setErrorEffect.of({})
+          });
+        }
         onParse(result, null);
       } catch (err) {
         setError(err.message);
+        // Extract error location if available
+        if (err.location) {
+          const loc = { line: err.location.line, column: err.location.column };
+          setErrorLocation(loc);
+          // Apply error marker
+          if (editorViewRef.current) {
+            editorViewRef.current.dispatch({
+              effects: setErrorEffect.of({ line: loc.line, column: loc.column, length: 10 })
+            });
+          }
+        } else {
+          setErrorLocation(null);
+        }
         onParse(null, err);
       }
     }, 500);
@@ -171,8 +243,12 @@ function DBMLEditor({ value, onChange, onParse }) {
           extensions={[
             sql(),
             EditorView.lineWrapping,
+            errorField,
           ]}
           onChange={handleChange}
+          onCreateEditor={(view) => {
+            editorViewRef.current = view;
+          }}
           placeholder="Enter your DBML code here..."
           basicSetup={{
             lineNumbers: true,

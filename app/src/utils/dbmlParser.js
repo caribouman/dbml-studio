@@ -21,10 +21,12 @@ export function parseDBML(dbmlCode) {
 
       // Extract the actual error message
       let errorMessage = parseError.message || 'Invalid DBML syntax';
+      let errorLocation = null;
 
       // Try to extract line and column info from error
       if (parseError.location) {
         const { start } = parseError.location;
+        errorLocation = { line: start.line, column: start.column };
         errorMessage = `Line ${start.line}, Column ${start.column}: ${errorMessage}`;
       } else {
         // Some errors include location in the message like "Error at line X"
@@ -39,7 +41,10 @@ export function parseDBML(dbmlCode) {
         found: parseError.found
       });
 
-      throw new Error(errorMessage);
+      // Create error object with location info
+      const error = new Error(errorMessage);
+      error.location = errorLocation;
+      throw error;
     }
 
     if (!database) {
