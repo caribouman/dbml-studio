@@ -558,30 +558,17 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions, loadedFi
                 <div className="section-content">
                   <p className="section-description">
                     Save the diagram (DBML code + table positions) to your Databricks workspace as a Python notebook.
+                    {loadedFilePath && (
+                      <>
+                        <br />
+                        <strong>Current file:</strong> {loadedFilePath}
+                        <br />
+                        <small style={{ color: '#666' }}>
+                          💡 Tip: Use the "Quick Save" button in the header to quickly save to this location.
+                        </small>
+                      </>
+                    )}
                   </p>
-
-                  {/* Quick Save button when file was loaded from Databricks */}
-                  {loadedFilePath && (
-                    <div style={{ marginBottom: '16px', padding: '12px', background: '#e8f4f8', borderRadius: '4px', border: '1px solid #667eea' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ flex: 1 }}>
-                          <strong>📂 Loaded from:</strong> {loadedFilePath}
-                        </span>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={handleWorkspaceUpload}
-                          disabled={uploading}
-                          style={{ minWidth: '120px' }}
-                        >
-                          {uploading ? 'Saving...' : '💾 Quick Save'}
-                        </button>
-                      </div>
-                      <small style={{ display: 'block', marginTop: '8px', color: '#666' }}>
-                        Click "Quick Save" to update the file at its original location
-                      </small>
-                    </div>
-                  )}
 
                   <div className="workspace-path-selector">
                     <label>

@@ -10,6 +10,7 @@ import DatabricksConnection from './components/DatabricksConnection';
 import DatabricksDeployDialog from './components/DatabricksDeployDialog';
 import LoadFromDatabricksDialog from './components/LoadFromDatabricksDialog';
 import { useAuthStore } from './stores/authStore';
+import { apiRequest } from './utils/api';
 import './App.css';
 
 function App() {
@@ -124,6 +125,50 @@ function App() {
     setShowDatabricksLoad(false);
   }, []);
 
+  const handleQuickSave = useCallback(async () => {
+    if (!loadedDatabricksPath || !isAuthenticated) return;
+
+    try {
+      // Create diagram data with DBML code and positions
+      const diagramData = {
+        dbml_code: dbmlCode,
+        positions: viewerPositions || {},
+        updated_at: new Date().toISOString()
+      };
+
+      // Upload the Python notebook with diagram data
+      await apiRequest('/api/databricks/workspace/upload', {
+        method: 'POST',
+        body: JSON.stringify({
+          path: loadedDatabricksPath,
+          content: JSON.stringify(diagramData, null, 2),
+          overwrite: true
+        })
+      });
+
+      // Also upload a simple .dbml file alongside the notebook
+      const dbmlPath = loadedDatabricksPath.replace(/\.py$/, '.dbml');
+      try {
+        await apiRequest('/api/databricks/workspace/upload', {
+          method: 'POST',
+          body: JSON.stringify({
+            path: dbmlPath,
+            content: dbmlCode,
+            overwrite: true,
+            wrapInNotebook: false
+          })
+        });
+      } catch (dbmlError) {
+        console.warn('Failed to upload .dbml file:', dbmlError);
+      }
+
+      alert('Diagram saved successfully to Databricks!');
+    } catch (error) {
+      console.error('Quick save failed:', error);
+      alert(`Failed to save: ${error.message}`);
+    }
+  }, [loadedDatabricksPath, dbmlCode, viewerPositions, isAuthenticated]);
+
   return (
     <div className="app">
       <div className="app-header">
@@ -138,6 +183,16 @@ function App() {
               >
                 Load from Databricks
               </button>
+              {loadedDatabricksPath && (
+                <button
+                  className="btn btn-primary"
+                  onClick={handleQuickSave}
+                  title={`Quick save to ${loadedDatabricksPath}`}
+                  style={{ background: '#28a745', borderColor: '#28a745' }}
+                >
+                  💾 Quick Save
+                </button>
+              )}
               <button
                 className="btn btn-databricks"
                 onClick={handleOpenDatabricksDeploy}
