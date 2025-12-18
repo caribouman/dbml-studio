@@ -325,16 +325,15 @@ class DatabricksClient {
    * @returns {Promise<object>} - API response
    */
   async uploadToWorkspace(path, content, overwrite = true, wrapInNotebook = true) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const timestamp = new Date().toISOString();
-        let finalContent;
-        const format = 'SOURCE'; // Always use SOURCE format (notebooks)
-        const language = 'PYTHON'; // Always Python notebooks
+    return new Promise((resolve, reject) => {
+      const timestamp = new Date().toISOString();
+      let finalContent;
+      const format = 'SOURCE'; // Always use SOURCE format (notebooks)
+      const language = 'PYTHON'; // Always Python notebooks
 
-        // Wrap content in a Python notebook format
-        // Databricks workspace/import API only accepts notebook formats
-        if (wrapInNotebook) {
+      // Wrap content in a Python notebook format
+      // Databricks workspace/import API only accepts notebook formats
+      if (wrapInNotebook) {
           // Full diagram notebook with JSON data and positions
           finalContent = `# Databricks notebook source
 # MAGIC %md
@@ -382,7 +381,6 @@ ${content}
 # This is a plain DBML file that can be used with DBML tools
 # Last modified: ${timestamp}
 `;
-        }
       }
 
       // Encode content to base64
@@ -468,9 +466,6 @@ ${content}
 
       req.write(data);
       req.end();
-      } catch (error) {
-        reject(error);
-      }
     });
   }
 
