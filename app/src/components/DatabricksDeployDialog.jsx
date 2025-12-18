@@ -255,6 +255,13 @@ function DatabricksDeployDialog({ isOpen, onClose, dbmlCode, positions }) {
       // For new files (create mode), use overwrite: false or omit it
       const isUpdating = workspaceExplorerMode === 'select';
 
+      console.log('[DatabricksDeployDialog] Uploading to workspace:', {
+        path: workspacePath,
+        mode: workspaceExplorerMode,
+        isUpdating,
+        overwrite: isUpdating
+      });
+
       const response = await apiRequest('/api/databricks/workspace/upload', {
         method: 'POST',
         body: JSON.stringify({

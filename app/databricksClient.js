@@ -327,12 +327,15 @@ class DatabricksClient {
     return new Promise((resolve, reject) => {
       // Wrap JSON content in a Python notebook format so Databricks can handle it
       // This allows the file to be stored in the workspace as a readable source file
+      const timestamp = new Date().toISOString();
       const wrappedContent = `# Databricks notebook source
 # MAGIC %md
 # MAGIC # DBML Studio Diagram
 # MAGIC
 # MAGIC This file contains a DBML diagram with table positions.
 # MAGIC The JSON data is stored in the cell below.
+# MAGIC
+# MAGIC **Last updated:** ${timestamp}
 
 # COMMAND ----------
 
@@ -346,6 +349,8 @@ ${content}
 # 1. Click "Load from Databricks"
 # 2. Select this file
 # 3. The JSON will be extracted and loaded automatically
+#
+# Last modified: ${timestamp}
 `;
 
       // Encode content to base64
@@ -363,6 +368,19 @@ ${content}
       if (overwrite) {
         requestData.overwrite = true;
       }
+
+      console.log('[DatabricksClient] Upload request:', JSON.stringify({
+        path,
+        overwrite,
+        hasOverwriteInRequest: 'overwrite' in requestData,
+        requestDataKeys: Object.keys(requestData),
+        fullRequest: {
+          path: requestData.path,
+          language: requestData.language,
+          format: requestData.format,
+          overwrite: requestData.overwrite
+        }
+      }, null, 2));
 
       const data = JSON.stringify(requestData);
 
@@ -385,18 +403,25 @@ ${content}
         });
 
         res.on('end', () => {
+          console.log('[DatabricksClient] Response status:', res.statusCode);
+          console.log('[DatabricksClient] Response data:', responseData);
+
           try {
             if (res.statusCode >= 200 && res.statusCode < 300) {
               // Success response is often empty for this endpoint
+              console.log('[DatabricksClient] Upload successful');
               resolve({ success: true, path });
             } else {
               const jsonResponse = responseData ? JSON.parse(responseData) : {};
+              console.error('[DatabricksClient] Upload failed:', jsonResponse);
               reject(new Error(jsonResponse.message || `HTTP ${res.statusCode}: ${responseData}`));
             }
           } catch (error) {
             if (res.statusCode >= 200 && res.statusCode < 300) {
+              console.log('[DatabricksClient] Upload successful (parse error but status OK)');
               resolve({ success: true, path });
             } else {
+              console.error('[DatabricksClient] Failed to parse error response:', error);
               reject(new Error(`Failed to parse response: ${error.message}`));
             }
           }

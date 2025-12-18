@@ -778,6 +778,13 @@ app.post('/api/databricks/workspace/upload', authenticateJWT, async (req, res) =
   try {
     const { path, content, overwrite } = req.body;
 
+    console.log('[Server] Workspace upload request:', JSON.stringify({
+      path,
+      contentLength: content?.length,
+      overwrite,
+      overwriteValue: overwrite !== false
+    }, null, 2));
+
     if (!path || !content) {
       return res.status(400).json({ error: 'Path and content are required' });
     }
@@ -794,9 +801,10 @@ app.post('/api/databricks/workspace/upload', authenticateJWT, async (req, res) =
     );
 
     const result = await client.uploadToWorkspace(path, content, overwrite !== false);
+    console.log('[Server] Upload successful:', result);
     res.json(result);
   } catch (error) {
-    console.error('Error uploading to workspace:', error);
+    console.error('[Server] Error uploading to workspace:', error);
     res.status(500).json({ error: error.message || 'Failed to upload file' });
   }
 });
