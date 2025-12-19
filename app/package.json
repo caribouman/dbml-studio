@@ -1,6 +1,6 @@
 {
   "name": "dbml-studio",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Interactive DBML viewer with draggable tables",
   "main": "electron.js",
   "author": {
