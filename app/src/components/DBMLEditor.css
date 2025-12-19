@@ -127,3 +127,16 @@
   content: '\u24d8';
   font-size: 16px;
 }
+
+/* Error highlighting styles */
+.cm-error-line {
+  background-color: rgba(255, 0, 0, 0.1) !important;
+}
+
+.cm-error-mark {
+  background-color: rgba(255, 0, 0, 0.3) !important;
+  text-decoration: wavy underline red !important;
+  text-decoration-style: wavy !important;
+  text-decoration-color: red !important;
+  text-decoration-thickness: 2px !important;
+}

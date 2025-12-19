@@ -43,50 +43,74 @@ Ref: comments.user_id > users.id`;
 // Effect to set error markers
 const setErrorEffect = StateEffect.define();
 
-// Error marker decoration
+// Error marker decoration using INLINE styles for guaranteed visibility
 const errorMark = Decoration.mark({
-  attributes: { style: "background-color: rgba(255, 0, 0, 0.3); text-decoration: wavy underline red;" }
+  attributes: {
+    style: "background-color: rgba(255, 100, 100, 0.4); border-bottom: 2px wavy red;"
+  }
 });
 
 const errorLineMark = Decoration.line({
-  attributes: { style: "background-color: rgba(255, 0, 0, 0.1);" }
+  attributes: {
+    style: "background-color: rgba(255, 100, 100, 0.15); border-left: 3px solid red; padding-left: 3px;"
+  }
 });
 
 // StateField to manage error decorations
+// Store both decorations AND error location to persist across transactions
 const errorField = StateField.define({
   create() {
-    return Decoration.none;
+    return { decorations: Decoration.none, errorLoc: null };
   },
-  update(decorations, tr) {
-    for (let effect of tr.effects) {
-      if (effect.is(setErrorEffect)) {
-        const { line, column, length = 1 } = effect.value;
-        if (line && column) {
-          try {
-            const doc = tr.state.doc;
-            const lineObj = doc.line(line);
-            const from = lineObj.from + column - 1;
-            const to = Math.min(from + length, lineObj.to);
+  update(state, tr) {
+    console.log('ErrorField update called, effects:', tr.effects.length);
 
-            const marks = [];
-            // Add line highlight
-            marks.push(errorLineMark.range(lineObj.from));
-            // Add text underline
-            if (from < to) {
-              marks.push(errorMark.range(from, to));
-            }
-            return Decoration.set(marks);
-          } catch (e) {
-            console.warn('Error creating decoration:', e);
-            return Decoration.none;
-          }
+    // Check if we have a setErrorEffect
+    let newErrorLoc = state.errorLoc;
+    for (let effect of tr.effects) {
+      console.log('Processing effect:', effect);
+      if (effect.is(setErrorEffect)) {
+        console.log('✓ This is a setErrorEffect!');
+        const { line, column, length = 1 } = effect.value;
+        console.log('Error effect received:', { line, column, length });
+
+        // Store the error location
+        if (line && column) {
+          newErrorLoc = { line, column, length };
+        } else {
+          newErrorLoc = null; // Clear error
         }
-        return Decoration.none;
       }
     }
-    return decorations;
+
+    // If we have an error location, create decorations
+    if (newErrorLoc && newErrorLoc.line && newErrorLoc.column) {
+      try {
+        const doc = tr.state.doc;
+        console.log('Creating decorations for line', newErrorLoc.line, 'column', newErrorLoc.column);
+        const lineObj = doc.line(newErrorLoc.line);
+        const from = lineObj.from + newErrorLoc.column - 1;
+        const to = Math.min(from + newErrorLoc.length, lineObj.to);
+
+        const marks = [];
+        // Add line highlight
+        marks.push(errorLineMark.range(lineObj.from));
+        // Add text underline
+        if (from < to) {
+          marks.push(errorMark.range(from, to));
+        }
+        console.log('✓✓✓ Decorations created and PERSISTED:', marks.length, 'marks');
+        return { decorations: Decoration.set(marks), errorLoc: newErrorLoc };
+      } catch (e) {
+        console.error('❌ Error creating decoration:', e);
+        return { decorations: Decoration.none, errorLoc: newErrorLoc };
+      }
+    }
+
+    console.log('No error location, returning no decorations');
+    return { decorations: Decoration.none, errorLoc: null };
   },
-  provide: f => EditorView.decorations.from(f)
+  provide: f => EditorView.decorations.from(f, state => state.decorations)
 });
 
 function DBMLEditor({ value, onChange, onParse }) {
@@ -96,6 +120,22 @@ function DBMLEditor({ value, onChange, onParse }) {
   const initialParseRef = useRef(false);
   const lastExternalValueRef = useRef(value);
   const editorViewRef = useRef(null);
+
+  // Function to apply error highlighting from outside
+  const applyErrorHighlighting = useCallback((errorObj) => {
+    console.log('🟢🟢🟢 applyErrorHighlighting called with:', errorObj);
+    if (errorObj && errorObj.location && editorViewRef.current) {
+      const loc = { line: errorObj.location.line, column: errorObj.location.column };
+      console.log('🟢 Applying highlighting for:', loc);
+      setErrorLocation(loc);
+      editorViewRef.current.dispatch({
+        effects: setErrorEffect.of({ line: loc.line, column: loc.column, length: 20 })
+      });
+      console.log('🟢 Highlighting applied!');
+    } else {
+      console.log('🔴 Cannot apply highlighting - errorObj:', errorObj, 'editorView:', !!editorViewRef.current);
+    }
+  }, []);
 
   const handleChange = useCallback((val) => {
     onChange(val);
@@ -127,18 +167,32 @@ function DBMLEditor({ value, onChange, onParse }) {
         }
         onParse(result, null);
       } catch (err) {
+        console.log('========== EDITOR CAUGHT ERROR ==========');
+        console.log('DBML Parse Error:', err);
+        console.log('Error message:', err.message);
+        console.log('Error location:', err.location);
+        console.log('Error keys:', Object.keys(err));
+        console.log('Has location?', 'location' in err);
+        console.log('Location value:', err.location);
         setError(err.message);
+
         // Extract error location if available
         if (err.location) {
           const loc = { line: err.location.line, column: err.location.column };
           setErrorLocation(loc);
+          console.log('Setting error location:', loc);
+          console.log('Editor view exists:', !!editorViewRef.current);
           // Apply error marker
           if (editorViewRef.current) {
+            console.log('Dispatching error effect to editor');
+            console.log('Error effect data:', { line: loc.line, column: loc.column });
             editorViewRef.current.dispatch({
-              effects: setErrorEffect.of({ line: loc.line, column: loc.column, length: 10 })
+              effects: setErrorEffect.of({ line: loc.line, column: loc.column, length: 20 })
             });
+            console.log('Error effect dispatched successfully');
           }
         } else {
+          console.log('No error location found in error object');
           setErrorLocation(null);
         }
         onParse(null, err);
@@ -149,6 +203,7 @@ function DBMLEditor({ value, onChange, onParse }) {
   }, [onChange, onParse, debounceTimer]);
 
   const handleLoadExample = useCallback(() => {
+    console.log('🔵🔵🔵 handleLoadExample CALLED');
     onChange(EXAMPLE_DBML);
     lastExternalValueRef.current = EXAMPLE_DBML; // Update ref
 
@@ -162,9 +217,29 @@ function DBMLEditor({ value, onChange, onParse }) {
     try {
       const result = parseDBML(EXAMPLE_DBML);
       setError(null);
+      setErrorLocation(null);
+      // Clear error markers
+      if (editorViewRef.current) {
+        editorViewRef.current.dispatch({
+          effects: setErrorEffect.of({})
+        });
+      }
       onParse(result, null);
     } catch (err) {
+      console.log('========== LOAD EXAMPLE ERROR ==========');
+      console.log('Error:', err);
+      console.log('Error location:', err.location);
       setError(err.message);
+
+      // Apply error highlighting
+      if (err.location && editorViewRef.current) {
+        const loc = { line: err.location.line, column: err.location.column };
+        setErrorLocation(loc);
+        editorViewRef.current.dispatch({
+          effects: setErrorEffect.of({ line: loc.line, column: loc.column, length: 20 })
+        });
+        console.log('Applied error highlighting to line', loc.line, 'column', loc.column);
+      }
       onParse(null, err);
     }
   }, [onChange, onParse]);
@@ -193,7 +268,19 @@ function DBMLEditor({ value, onChange, onParse }) {
         setError(null);
         onParse(result, null);
       } catch (err) {
+        console.log('========== INITIAL PARSE ERROR ==========');
+        console.log('Error:', err);
+        console.log('Error location:', err.location);
         setError(err.message);
+
+        // Apply error highlighting
+        if (err.location && editorViewRef.current) {
+          const loc = { line: err.location.line, column: err.location.column };
+          setErrorLocation(loc);
+          editorViewRef.current.dispatch({
+            effects: setErrorEffect.of({ line: loc.line, column: loc.column, length: 20 })
+          });
+        }
         onParse(null, err);
       }
     }
@@ -209,11 +296,31 @@ function DBMLEditor({ value, onChange, onParse }) {
         setError(null);
         onParse(result, null);
       } catch (err) {
+        console.log('========== EXTERNAL VALUE PARSE ERROR ==========');
+        console.log('Error:', err);
+        console.log('Error location:', err.location);
         setError(err.message);
+        applyErrorHighlighting(err);
         onParse(null, err);
       }
     }
-  }, [value, onParse]);
+  }, [value, onParse, applyErrorHighlighting]);
+
+  // Watch for errors passed from parent and apply highlighting
+  useEffect(() => {
+    console.log('🔵 Checking for error to highlight');
+    // Try to parse current value to check for errors
+    if (value && value.trim() && editorViewRef.current) {
+      try {
+        parseDBML(value);
+        // No error, clear highlighting
+        console.log('✅ No error in current value');
+      } catch (err) {
+        console.log('❌ Error detected in current value:', err);
+        applyErrorHighlighting(err);
+      }
+    }
+  }, [value, applyErrorHighlighting]);
 
   return (
     <div className="dbml-editor">

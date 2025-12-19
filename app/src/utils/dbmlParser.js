@@ -18,32 +18,131 @@ export function parseDBML(dbmlCode) {
       database = parser.parse(dbmlCode, 'dbml');
     } catch (parseError) {
       console.error('Parse error:', parseError);
+      console.error('Parse error keys:', Object.keys(parseError));
+      console.error('Parse error all keys:', Object.getOwnPropertyNames(parseError));
+      console.error('Parse error type:', parseError.constructor.name);
+      console.error('Parse error prototype:', Object.getPrototypeOf(parseError));
+      console.error('Direct datas access:', parseError.datas);
+      console.error('Has datas property:', 'datas' in parseError);
+
+      // Try to stringify to see structure
+      try {
+        console.error('Error as JSON:', JSON.stringify(parseError, null, 2));
+      } catch (e) {
+        console.error('Cannot stringify error');
+      }
+
+      // Try for...in loop and capture diags (not datas!)
+      console.error('Properties via for...in:');
+      let datasArray = null;
+      for (let key in parseError) {
+        console.error(`  ${key}:`, parseError[key]);
+        if (key === 'diags' || key === 'datas') {
+          datasArray = parseError[key];
+          console.error(`Found ${key} via for...in:`, datasArray);
+        }
+      }
+
+      // Also try bracket notation for both diags and datas
+      const diagsBracket = parseError['diags'];
+      const datasBracket = parseError['datas'];
+      console.error('Diags via bracket notation:', diagsBracket);
+      console.error('Datas via bracket notation:', datasBracket);
+      if (!datasArray && diagsBracket) {
+        datasArray = diagsBracket;
+      } else if (!datasArray && datasBracket) {
+        datasArray = datasBracket;
+      }
+
+      // Check if it's array-like or iterable
+      console.error('Is array?', Array.isArray(parseError));
+      console.error('Has length?', parseError.length);
+      if (parseError.length > 0) {
+        console.error('First element (parseError[0]):', parseError[0]);
+      }
 
       // Extract the actual error message
       let errorMessage = parseError.message || 'Invalid DBML syntax';
       let errorLocation = null;
 
-      // Try to extract line and column info from error
-      if (parseError.location) {
-        const { start } = parseError.location;
-        errorLocation = { line: start.line, column: start.column };
-        errorMessage = `Line ${start.line}, Column ${start.column}: ${errorMessage}`;
-      } else {
-        // Some errors include location in the message like "Error at line X"
-        // Just use the message as-is
+      // Log what we found
+      console.error('Captured datasArray:', datasArray);
+
+      // Try to get datas array (keep old code as fallback)
+      if (!datasArray) {
+        try {
+          // Try direct access
+          datasArray = parseError.datas;
+          console.error('Datas array from direct access:', datasArray);
+
+          // If that doesn't work, try getting it as a property descriptor
+          if (!datasArray) {
+            const descriptor = Object.getOwnPropertyDescriptor(parseError, 'datas');
+            console.error('Datas property descriptor:', descriptor);
+            if (descriptor && descriptor.get) {
+              datasArray = descriptor.get.call(parseError);
+            } else if (descriptor && descriptor.value) {
+              datasArray = descriptor.value;
+            }
+          }
+        } catch (e) {
+          console.error('Error accessing datas:', e);
+        }
+      }
+
+      // @dbml/core errors have a 'diags' or 'datas' array with error details
+      if (datasArray && Array.isArray(datasArray) && datasArray.length > 0) {
+        const firstError = datasArray[0];
+        console.error('First error in array:', firstError);
+        console.error('First error keys:', Object.keys(firstError));
+        console.error('First error location:', firstError.location);
+
+        // Extract location from the first error
+        // The error object has location.start.{line, column}
+        if (firstError.location && firstError.location.start) {
+          errorLocation = {
+            line: firstError.location.start.line,
+            column: firstError.location.start.column
+          };
+          errorMessage = firstError.message || errorMessage;
+          errorMessage = `Line ${errorLocation.line}, Column ${errorLocation.column}: ${errorMessage}`;
+          console.error('✓ Successfully extracted error location:', errorLocation);
+        } else if (firstError.start) {
+          // Fallback: try direct start property
+          errorLocation = {
+            line: firstError.start.line,
+            column: firstError.start.column
+          };
+          errorMessage = firstError.message || errorMessage;
+          errorMessage = `Line ${errorLocation.line}, Column ${errorLocation.column}: ${errorMessage}`;
+          console.error('✓ Successfully extracted error location from start:', errorLocation);
+        }
+      } else if (parseError.location && parseError.location.start) {
+        // Fallback to direct location property
+        errorLocation = {
+          line: parseError.location.start.line,
+          column: parseError.location.start.column
+        };
+        errorMessage = `Line ${errorLocation.line}, Column ${errorLocation.column}: ${errorMessage}`;
       }
 
       // Log full error for debugging
-      console.error('Full parse error details:', {
-        message: parseError.message,
-        location: parseError.location,
-        expected: parseError.expected,
-        found: parseError.found
-      });
+      console.error('Extracted error location:', errorLocation);
+      console.error('Final error message:', errorMessage);
 
       // Create error object with location info
       const error = new Error(errorMessage);
-      error.location = errorLocation;
+      // Use Object.defineProperty to ensure location is preserved
+      if (errorLocation) {
+        Object.defineProperty(error, 'location', {
+          value: errorLocation,
+          writable: true,
+          enumerable: true,
+          configurable: true
+        });
+      }
+      console.error('Error object before throw:', error);
+      console.error('Error.location before throw:', error.location);
       throw error;
     }
 
@@ -328,6 +427,8 @@ export function parseDBML(dbmlCode) {
     };
   } catch (error) {
     console.error('DBML parsing error:', error);
-    throw new Error(error.message || 'Failed to parse DBML');
+    console.error('Re-throwing error with location:', error.location);
+    // Re-throw the original error to preserve the location property
+    throw error;
   }
 }
